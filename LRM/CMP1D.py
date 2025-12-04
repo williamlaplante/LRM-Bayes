@@ -11,11 +11,11 @@ class SmoothedEmpiricalDensity1D:
         self.alpha = float(alpha)
         self.total: int = 0
         self.M: int = -1
-        self.K_obs: int = 0                  # number of observed unique values
+        self.K_obs: int = 0 # number of observed unique values
         self._counts: np.ndarray | None = None
         self._pmf_obs: np.ndarray | None = None
         self._logpmf_obs: np.ndarray | None = None
-        self._p_extra: float | None = None   # p(M+1)
+        self._p_extra: float | None = None # p(M+1)
         self._logp_extra: float | None = None
 
     def fit(self, data):
@@ -106,7 +106,7 @@ class SmoothedEmpiricalDensity1D:
 
 class CMP1D:
     """
-    Minimal CMP for 1-D count data with neighbor x -> x+1 (non-circular).
+    Minimal CMP for 1-D count data with ***specific*** matching set M(x) = {x+1} (non-circular).
     T(x) = [ x,  -log(x!) ]^T  =>  T(x+1)-T(x) = [ 1,  -log(x+1) ]^T
     Parameter dimension = 2.
     """
@@ -118,7 +118,7 @@ class CMP1D:
         assert cutoff < -1e2, "Cutoff is too large."
         self.cutoff = float(cutoff)
 
-    # ---- vectorized Λ and ν over data ----
+    # ---- vectorized Lambda and nu over data ----
     def _Lambda_nu(self, data_1d):
         x = np.asarray(data_1d)
         assert x.ndim == 1, "data must be a 1-D array (n,)"

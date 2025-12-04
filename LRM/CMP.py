@@ -69,9 +69,7 @@ class PMFEstimator(ABC):
 #Empirical density for CMP model. Alpha=0 recovers PMF.
 class SmoothedEmpiricalDensity(PMFEstimator):
     def __init__(self, alpha=1.0):
-        
-        #alpha: Additive smoothing parameter (alpha=0 recovers the empirical distribution).
-        
+                
         self.alpha = alpha
         self.counts = None
         self.total = None
@@ -82,7 +80,7 @@ class SmoothedEmpiricalDensity(PMFEstimator):
     def fit(self, data):
         
         #Fit the model to a dataset of shape (n_samples, d), where d >= 1.
-        #Each row in `data` is a discrete d-dimensional sample.
+        #Each row in data is a discrete d-dimensional sample.
         
         data = np.asarray(data)
         assert data.ndim == 2, "fit() expects a 2D array of shape (n_samples, d)"
@@ -105,7 +103,7 @@ class SmoothedEmpiricalDensity(PMFEstimator):
 
     def prob(self, x):
         
-        #Return the (smoothed) probability of a single d-dimensional sample `x`.
+        #Return the (smoothed) probability of a single d-dimensional sample x.
         #If alpha=0, this matches the empirical distribution.
         
         x = np.asarray(x).flatten()
@@ -123,7 +121,7 @@ class SmoothedEmpiricalDensity(PMFEstimator):
 
     def score_samples(self, x):
         
-        #Return the log-probability of a single d-dimensional sample `x`.
+        #Return the log-probability of a single d-dimensional sample x.
         #Returns -inf for unseen x when alpha=0.
         
         p = self.prob(x)

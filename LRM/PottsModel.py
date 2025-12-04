@@ -25,8 +25,8 @@ def _neighbor_tuples_4(grid):
 
 def _neighbor_counts_4(grid, Xi):
     """
-    For each site and each state in Xi, count 4-neighbor matches via convolution.
-    Returns a (N, q) integer array where q = len(Xi), N = L*L.
+    For each site and each state in S, count 4-neighbor matches via convolution.
+    Returns a (N, q) integer array where q = len(S), N = L*L.
     """
     kernel = np.array([[0, 1, 0],
                        [1, 0, 1],
@@ -38,7 +38,6 @@ def _neighbor_counts_4(grid, Xi):
 
 # ============================================================
 # Utilities for packing neighbor 4-tuples into integer keys
-# (robust to arbitrary labels)
 # ============================================================
 
 def _factorize_columns(neigh):
@@ -78,33 +77,33 @@ class EmpiricalPottsConditional:
         self.state_to_index = {s: i for i, s in enumerate(self.Xi)}
 
         # Build neighbor tuples and centers
-        neigh = _neighbor_tuples_4(grid)            # (N,4)
-        centers = grid.ravel()                      # (N,)
-        cidx = np.searchsorted(self.Xi, centers)    # (N,) indices into 0..q-1
+        neigh = _neighbor_tuples_4(grid) # (N,4)
+        centers = grid.ravel() # (N,)
+        cidx = np.searchsorted(self.Xi, centers) # (N,) indices into 0..q-1
 
         # Factorize neighbor values globally and pack to keys
-        self._vals, neigh_comp = _factorize_columns(neigh)   # (V,), (N,4) in 0..V-1
+        self._vals, neigh_comp = _factorize_columns(neigh) # (V,), (N,4) in 0..V-1
         self._K = int(self._vals.size)
-        keys = _pack_keys(neigh_comp, self._K)               # (N,)
+        keys = _pack_keys(neigh_comp, self._K) # (N,)
 
         # Unique keys and inverse mapping
-        uniq_keys, inv = np.unique(keys, return_inverse=True)  # (U,), (N,)
+        uniq_keys, inv = np.unique(keys, return_inverse=True) # (U,), (N,)
         self._uniq_keys = uniq_keys
-        self._key2row = {int(k): i for i, k in enumerate(uniq_keys)}  # key -> row index
+        self._key2row = {int(k): i for i, k in enumerate(uniq_keys)} # key -> row index
 
         # Counts per unique neighbor tuple and class (vectorized)
-        counts = np.zeros((uniq_keys.size, self.q), dtype=np.int64)   # (U,q)
+        counts = np.zeros((uniq_keys.size, self.q), dtype=np.int64) # (U,q)
         np.add.at(counts, (inv, cidx), 1)
 
         # Convert counts -> probs with Laplace smoothing
         if self.alpha > 0.0:
             den = counts.sum(axis=1, keepdims=True) + self.q * self.alpha
-            self._probs = (counts.astype(np.float64) + self.alpha) / den  # (U,q)
+            self._probs = (counts.astype(np.float64) + self.alpha) / den # (U,q)
         else:
             den = counts.sum(axis=1, keepdims=True)
             with np.errstate(divide='ignore', invalid='ignore'):
                 self._probs = counts.astype(np.float64) / den
-                self._probs[np.isnan(self._probs)] = 0.0  # rows with den=0
+                self._probs[np.isnan(self._probs)] = 0.0 # rows with den=0
 
         # Convenience default rows
         self._uniform = np.full(self.q, 1.0 / self.q, dtype=np.float64)
@@ -203,25 +202,18 @@ class PottsModel:
 
     def __init__(self, grid, alpha=0.0, log_eps=np.log(1e-6)):
         self.grid  = np.asarray(grid)
-        self.alpha = (None if alpha is None else float(alpha))
+        self.alpha = (0.1 if alpha is None else float(alpha))
         self.log_eps = float(log_eps)
 
         # States and mappings
         self.Xi = np.unique(self.grid)
         self.q  = len(self.Xi)
 
-        # ---- fit alpha via Dirichlet-Multinomial EB if requested ----
-        if self.alpha is None:
-            self.alpha, _ = EmpiricalPottsConditional.fit_alpha_good_turing(
-                self.grid, Xi=self.Xi, weights="invn"  # or "equal"
-            )
-            self.alpha = max(self.alpha, 1e-8)
-
-        # Center indices (0..q-1) in the SAME order as Xi
+        # Center indices (0..q-1) in the SAME order as S
         self._center_idx = np.searchsorted(self.Xi, self.grid.ravel()).astype(np.int64)  # (N,)
         self._N = self.grid.size
 
-        # Empirical conditional (vectorized) — now uses (possibly) fitted alpha
+        # Empirical conditional (vectorized)
         self.empirical = EmpiricalPottsConditional(self.grid, alpha=self.alpha)
 
         # Precompute neighbor tuples/keys and counts
@@ -241,15 +233,15 @@ class PottsModel:
     def _compute_matrices_from_indices(self, idx, empirical):
 
         idx  = np.asarray(idx, dtype=np.int64)
-        ncnt = self._neighbor_counts[idx]          # (m, q)
-        cidx = self._center_idx[idx]               # (m,)
-        keys = self._neighbor_keys[idx]            # (m,)
+        ncnt = self._neighbor_counts[idx] # (m, q)
+        cidx = self._center_idx[idx] # (m,)
+        keys = self._neighbor_keys[idx] # (m,)
         m, q = ncnt.shape
         eps = np.exp(self.log_eps)
 
         # Empirical probabilities for all sites
-        P = empirical.probs_for_keys(keys)         # (m, q)
-        pc = P[np.arange(m), cidx]                 # (m,)
+        P = empirical.probs_for_keys(keys) # (m, q)
+        pc = P[np.arange(m), cidx] # (m,)
 
         # u(i,.) = n_s - n_c; zero current column
         u = ncnt - ncnt[np.arange(m), cidx][:, None]

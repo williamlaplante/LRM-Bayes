@@ -48,7 +48,7 @@ class SmoothedEmpiricalConditionalPMF:
         out = np.full(curr.shape, -np.inf, dtype=float)
         if np.any(ok):
             p = self.cond_pmf[prev[ok], curr[ok]]
-            mask = p >= self.eps                      # ← drop tiny/zero probs
+            mask = p >= self.eps # drop tiny/zero probs
             # write only entries with p >= eps
             out_sub = np.full(p.shape, -np.inf, dtype=float)
             out_sub[mask] = np.log(p[mask])
@@ -59,12 +59,6 @@ class SmoothedEmpiricalConditionalPMF:
 class CMPAR1:
     """
     Inference + calibration tool for the CMP AR(1) model.
-    Matches the Ising-style API:
-      - estimate_params_full()
-      - posterior(beta, prior_mean, prior_cov)
-      - coverage(...)
-      - fit_coverage(...)
-    All compute-matrix logic is encapsulated inside this class.
     """
     def __init__(self, samples, k_max=10, alpha=1.0, phi=0.05, eps=1e-12):
         self.samples = np.asarray(samples, dtype=int)
@@ -72,7 +66,7 @@ class CMPAR1:
         self.alpha = float(alpha)
         self.phi = float(phi)
 
-        # Transition indices (like "sites" in Ising)
+        # Transition indices 
         self._t_idx_all = np.arange(1, len(self.samples), dtype=int)
         self.n_trans = self._t_idx_all.size
 
@@ -188,9 +182,9 @@ class CMPAR1:
 
         # +1 branch contributions
         if np.any(mask_p):
-            base_p_p = base_p[mask_p]                          # P(x_curr | x_prev)
-            next_p_p = empirical.cond_pmf[x_prev[mask_p], xp[mask_p]]  # P(x_curr+1 | x_prev)
-            valid_p = (base_p_p >= eps) & (next_p_p >= eps)    # exclude tiny/zero terms
+            base_p_p = base_p[mask_p] # P(x_curr | x_prev)
+            next_p_p = empirical.cond_pmf[x_prev[mask_p], xp[mask_p]] # P(x_curr+1 | x_prev)
+            valid_p = (base_p_p >= eps) & (next_p_p >= eps) # exclude tiny/zero terms
             if np.any(valid_p):
                 diff_p = (np.log(next_p_p[valid_p]) - np.log(base_p_p[valid_p])).reshape(-1, 1)
                 nu_p = (M_p[valid_p] * diff_p).sum(axis=0, keepdims=True).T
@@ -201,9 +195,9 @@ class CMPAR1:
 
         # -1 branch contributions
         if np.any(mask_m):
-            base_p_m = base_p[mask_m]                          # P(x_curr | x_prev)
-            next_p_m = empirical.cond_pmf[x_prev[mask_m], xm[mask_m]]  # P(x_curr-1 | x_prev)
-            valid_m = (base_p_m >= eps) & (next_p_m >= eps)    # exclude tiny/zero terms
+            base_p_m = base_p[mask_m] # P(x_curr | x_prev)
+            next_p_m = empirical.cond_pmf[x_prev[mask_m], xm[mask_m]] # P(x_curr-1 | x_prev)
+            valid_m = (base_p_m >= eps) & (next_p_m >= eps) # exclude tiny/zero terms
             if np.any(valid_m):
                 diff_m = (np.log(next_p_m[valid_m]) - np.log(base_p_m[valid_m])).reshape(-1, 1)
                 nu_m = (M_m[valid_m] * diff_m).sum(axis=0, keepdims=True).T
@@ -231,7 +225,7 @@ class CMPAR1:
 
     def estimate_params_full(self, ridge=1e-12):
         """
-        Solve (Lambda + ridge I) w = nu  -> θ̂ (3,)
+        Solve (Lambda + ridge I) w = nu  -> hat{theta} (3,)
         """
         try:
             w = solve(self._Lambda + ridge * np.eye(3), self._nu)
